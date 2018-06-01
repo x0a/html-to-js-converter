@@ -14,6 +14,13 @@ gulp.task("ts", () => {
     .pipe(gulp.dest("dist"))
 })
 
+gulp.task("update", done => {
+	//copy dist folder into github-pages branch
+	exec("git subtree push --prefix dist origin gh-pages", (err, stdout, stderr) => {
+		done(err);
+	})
+})
+
 gulp.task("default", gulp.series("pug", "ts"))
 
 gulp.watch("src/*", gulp.series("default"));
