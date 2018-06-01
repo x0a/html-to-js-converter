@@ -20,13 +20,30 @@
             while (DOM.output.lastChild)
                 DOM.output.removeChild(DOM.output.lastChild);
             var _loop_1 = function (child) {
-                var output;
+                var output, tree = createTree(child, null, beautify ? 1 : 0, removeEmpty, templateLiterals, padding);
+                if (removeEmpty && tree.length === 0)
+                    return "continue";
                 DOM.output.appendChild((function () {
                     var el = document.createElement("pre");
+                    el.setAttribute("class", "jscontainer");
                     el.appendChild(output = (function () {
                         var el = document.createElement("code");
-                        el.innerHTML = createTree(child, null, beautify ? 1 : 0, removeEmpty, templateLiterals, padding);
+                        el.innerHTML = tree;
                         el.setAttribute("class", "javascript");
+                        return el;
+                    })());
+                    el.appendChild((function () {
+                        var el = document.createElement("button");
+                        el.setAttribute("class", "btn btn-secondary btn-sm jscopy");
+                        el.setAttribute("type", "button");
+                        el.addEventListener("click", function () {
+                            var selection = window.getSelection();
+                            var range = document.createRange();
+                            range.selectNodeContents(output);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                        });
+                        el.appendChild(document.createTextNode("Select all"));
                         return el;
                     })());
                     return el;

@@ -1,16 +1,17 @@
 declare const hljs:any;
 
+interface DOM{
+	output: HTMLDivElement,
+	input: HTMLTextAreaElement,
+	convertBtn: HTMLButtonElement,
+	emptyNodes: HTMLInputElement,
+	beautify: HTMLInputElement,
+	templateLiterals: HTMLInputElement,
+	padding: HTMLSelectElement,
+	[key: string]: HTMLElement
+}
+
 (function(window: Window, document: Document, undefined?:any){
-	interface DOM{
-		output: HTMLDivElement,
-		input: HTMLTextAreaElement,
-		convertBtn: HTMLButtonElement,
-		emptyNodes: HTMLInputElement,
-		beautify: HTMLInputElement,
-		templateLiterals: HTMLInputElement,
-		padding: HTMLSelectElement,
-		[key: string]: HTMLElement
-	}
 
 	let testHtml = `<ul id="fruits">
 	<li class="apple">Apple</li>
@@ -42,14 +43,31 @@ declare const hljs:any;
 				DOM.output.removeChild(DOM.output.lastChild);
 	
 			for(let child of <any>inputHtml.childNodes){
-				let output;
-	
+				let output:HTMLElement, tree = createTree(child, null, beautify ? 1 : 0, removeEmpty, templateLiterals, padding);
+
+				if(removeEmpty && tree.length === 0) continue;
+
 				DOM.output.appendChild((() => {
 					let el = document.createElement("pre");
+					el.setAttribute("class", "jscontainer");
 					el.appendChild(output = (() => {
 						let el = document.createElement("code");
-						el.innerHTML = createTree(child, null, beautify ? 1 : 0, removeEmpty, templateLiterals, padding);
-						el.setAttribute("class", `javascript`);
+						el.innerHTML = tree
+						el.setAttribute("class", "javascript");
+						return el;
+					})());
+					el.appendChild((() => {
+						let el = document.createElement("button");
+						el.setAttribute("class", "btn btn-secondary btn-sm jscopy");
+						el.setAttribute("type", "button");
+						el.addEventListener("click", () => {
+							const selection = window.getSelection();
+							const range = document.createRange();
+							range.selectNodeContents(output);
+							selection.removeAllRanges();
+							selection.addRange(range);
+						})
+						el.appendChild(document.createTextNode("Select all"));
 						return el;
 					})());
 					return el;
