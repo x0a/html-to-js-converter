@@ -8,7 +8,8 @@ declare const hljs:any;
 		emptyNodes: HTMLInputElement,
 		beautify: HTMLInputElement,
 		templateLiterals: HTMLInputElement,
-		padding: HTMLSelectElement
+		padding: HTMLSelectElement,
+		[key: string]: HTMLElement
 	}
 
 	let testHtml = `<ul id="fruits">
