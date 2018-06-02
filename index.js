@@ -56,13 +56,28 @@
         });
         DOM.input.addEventListener("keydown", function (event) {
             //allow use of tab key in html editor
-            if (event.keyCode === 9 || event.which === 9) {
+            var key = event.keyCode || event.which || 0;
+            var oldSelectionStart;
+            var padding;
+            if (key === 9 || key === 13) {
                 event.preventDefault();
-                var oldSelectionStart = this.selectionStart;
-                var padding = ~~DOM.padding.value;
-                var add = padding < 1 ? "\t" : " ".repeat(padding);
+                oldSelectionStart = this.selectionStart;
+                padding = ~~DOM.padding.value;
+            }
+            if (key === 9) {
+                var padding_1 = ~~DOM.padding.value;
+                var add = padding_1 < 1 ? "\t" : " ".repeat(padding_1);
                 this.value = this.value.substring(0, this.selectionStart) + add + this.value.substring(this.selectionEnd);
                 this.selectionEnd = oldSelectionStart + add.length;
+            }
+            else if (key === 13) {
+                var lastLn = this.value.lastIndexOf("\n", oldSelectionStart - 1);
+                var lastLine = this.value.substring(lastLn + 1, oldSelectionStart); //from selection, get last 
+                var deWhiteSpace = lastLine.trim();
+                var whiteSpaceEnd = deWhiteSpace.length ? lastLine.indexOf(deWhiteSpace) : undefined;
+                var whiteSpace = lastLine.substring(0, whiteSpaceEnd);
+                this.value = this.value.substring(0, oldSelectionStart) + "\n" + whiteSpace + this.value.substring(this.selectionEnd);
+                this.selectionEnd = oldSelectionStart + whiteSpace.length + 1;
             }
         });
         DOM.beautify.addEventListener("change", function () {
