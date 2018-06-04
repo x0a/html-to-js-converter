@@ -1,7 +1,9 @@
 let gulp = require("gulp");
 let pug = require("gulp-pug");
-let ts = require("gulp-typescript");
 let exec = require('child_process').exec;
+var browserify = require("browserify");
+var source = require('vinyl-source-stream');
+var tsify = require("tsify");
 
 gulp.task("pug", () => {
     return gulp.src("src/*.pug")
@@ -10,9 +12,11 @@ gulp.task("pug", () => {
 })
 
 gulp.task("ts", () => {
-    return gulp.src("src/*.ts")
-    .pipe(ts())
-    .pipe(gulp.dest("dist"))
+    return browserify({entries: ["src/index.ts"]})
+    .plugin(tsify)
+    .bundle()
+    .pipe(source("index.js"))
+    .pipe(gulp.dest("dist/"))
 })
 
 gulp.task("update", done => {
