@@ -21,11 +21,11 @@ html
                 margin-bottom: 0;
                 margin-left: 2px;
             }
-            select{
-                visibility: hidden;
+            .b-container{
+                display: none;
             }
-            select.show{
-                visibility: visible;
+            .b-container.show{
+                display: initial;
             }
             .space{
                 padding-right: 5px;
@@ -51,23 +51,33 @@ html
                 | 
                 a.navbar-brand(href="#") HTML2JS Converter
         .container
-            .col-sm
-                textarea.form-control(id="input", spellcheck="false")
-                .input-group.convert-group
-                    button.btn.btn-primary.form-control(id="convertBtn", type="button") Convert
-                    .input-group-append
-                        .input-group-text
-                            input(type="checkbox", id="emptyNodes", checked)
-                            label(for="emptyNodes") Ignore whitespace
-                        .input-group-text  
+            .row
+                .col-md-9
+                    textarea.form-control(id="input", spellcheck="false")
+                    button.btn.btn-primary.form-control.convert-group(id="convertBtn", type="button") Convert
+                    #outputs
+                .col-md-3
+                    h5 Options
+                    ul.list-group
+                        li.list-group-item  
+                            input(type="checkbox", id="functional", checked)
+                            label(for="functional") Functional
+                        li.list-group-item  
+                            input(type="checkbox", id="ES6", checked)
+                            label(for="ES6") ES6
+                        li.list-group-item  
                             input(type="checkbox", id="templateLiterals")
                             label(for="templateLiterals") Template literals
-                        .input-group-text
+                        li.list-group-item
+                            input(type="checkbox", id="emptyNodes", checked)
+                            label(for="emptyNodes") Ignore whitespace
+                        li.list-group-item.b-container.show
                             input(type="checkbox", id="beautify", checked)
                             label(for="beautify").space Beautify output
-                            select.custom-select.show(id="padding")
+                        li.list-group-item
+                            label(for="padding") Indentation
+                            select.custom-select(id="padding")
                                 option(value="-1") Tabs
                                 option(selected, value="4") 4 Spaces
                                 option(value="2") 2 Spaces
 
-                #outputs
