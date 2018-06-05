@@ -169,8 +169,7 @@ const htmlconverter_1 = require("./htmlconverter");
             functional: document.querySelector("#functional"),
             ES6: document.querySelector("#ES6"),
             parentName: document.querySelector("#parentName"),
-            childName: document.querySelector("#childName"),
-            childNameContainer: document.querySelector(".c-container")
+            childName: document.querySelector("#childName")
         };
         DOM.convertBtn.addEventListener("click", () => {
             let inputHtml = parseHTML(DOM.input.value);

@@ -14,7 +14,6 @@ interface DOM{
     ES6: HTMLSelectElement,
     parentName: HTMLInputElement,
     childName: HTMLInputElement,
-    childNameContainer: HTMLDivElement,
     [key: string]: HTMLElement
 }
 
@@ -40,8 +39,7 @@ interface DOM{
             functional: document.querySelector("#functional"),
             ES6: document.querySelector("#ES6"),
             parentName: document.querySelector("#parentName"),
-            childName: document.querySelector("#childName"),
-            childNameContainer: document.querySelector(".c-container")
+            childName: document.querySelector("#childName")
         }
         
         DOM.convertBtn.addEventListener("click", () => {
