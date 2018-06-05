@@ -281,8 +281,10 @@ const htmlconverter_1 = require("./htmlconverter");
                 DOM.parentName.classList.remove("is-invalid");
         });
         DOM.parentName.addEventListener("change", () => {
-            if (DOM.parentName.value.length < 1)
+            if (DOM.parentName.value.length < 1) {
                 DOM.parentName.value = "el";
+                DOM.parentName.classList.remove("is-invalid");
+            }
         });
         DOM.input.value = testHtml;
         DOM.convertBtn.click();
