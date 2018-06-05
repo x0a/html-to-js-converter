@@ -12,6 +12,9 @@ interface DOM{
     padding: HTMLSelectElement,
     functional: HTMLSelectElement,
     ES6: HTMLSelectElement,
+    parentName: HTMLInputElement,
+    childName: HTMLInputElement,
+    childNameContainer: HTMLDivElement,
     [key: string]: HTMLElement
 }
 
@@ -35,7 +38,10 @@ interface DOM{
             templateLiterals: document.querySelector("#templateLiterals"),
             padding: document.querySelector("#padding"),
             functional: document.querySelector("#functional"),
-            ES6: document.querySelector("#ES6")
+            ES6: document.querySelector("#ES6"),
+            parentName: document.querySelector("#parentName"),
+            childName: document.querySelector("#childName"),
+            childNameContainer: document.querySelector(".c-container")
         }
         
         DOM.convertBtn.addEventListener("click", () => {
@@ -46,13 +52,25 @@ interface DOM{
             let padding = ~~DOM.padding.value;
             let functional = !!DOM.functional.checked;
             let ES6 = !!DOM.ES6.checked;
+            let parentName = DOM.parentName.value;
+            let childName = DOM.childName.value;
 
             while(DOM.output.lastChild) //remove all children from #outputs
                 DOM.output.removeChild(DOM.output.lastChild);
     
             for(let child of <any>inputHtml.childNodes){ //add new children
                 let output:HTMLElement,
-                    tree = HTML2JS.create(child, {functional: functional, ES6: ES6, isParent: true, tabLevel: functional && beautify ? 1 : 0, removeEmpty: removeEmpty, templateLiterals: templateLiterals, paddingType: padding});
+                    tree = HTML2JS.create(child, {
+                        functional: functional,
+                        ES6: ES6,
+                        isParent: true, 
+                        tabLevel: functional && beautify ? 1 : 0, 
+                        removeEmpty: removeEmpty, 
+                        templateLiterals: templateLiterals, 
+                        paddingType: padding,
+                        childName: childName,
+                        parentName: parentName
+                    });
 
                 if(removeEmpty && tree.length === 0) continue;
 
@@ -120,10 +138,13 @@ interface DOM{
 
         DOM.functional.addEventListener("change", () => {
             //show padding selector
-            if(DOM.functional.checked)
+            if(DOM.functional.checked){
                 DOM.beautifyContainer.classList.add("show");
-            else
+                DOM.childNameContainer.classList.remove("show");
+            }else{
                 DOM.beautifyContainer.classList.remove("show");
+                DOM.childNameContainer.classList.add("show");
+            }
         })
 
         DOM.ES6.addEventListener("change", () => {

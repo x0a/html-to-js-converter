@@ -6,6 +6,22 @@ class HTML2JS {
         //disabling ES6 should also disable template literals
         if (options.functional === undefined)
             options.functional = true;
+        if (options.ES6 === undefined)
+            options.ES6 = true;
+        if (options.templateLiterals === undefined)
+            options.templateLiterals = false;
+        if (options.removeEmpty === undefined)
+            options.removeEmpty = true;
+        if (options.tabLevel === undefined)
+            options.tabLevel = 1;
+        if (options.paddingType === undefined)
+            options.paddingType = 4;
+        if (options.isParent === undefined)
+            options.isParent = true;
+        if (options.parentName === undefined || options.parentName.length < 2)
+            options.parentName = "el";
+        if (options.childName === undefined || options.childName.length < 2)
+            options.childName = "Ch";
         if (options.functional) {
             if (options.ES6)
                 this.funcString = "(() => {";
@@ -19,73 +35,80 @@ class HTML2JS {
             this.varString = "let";
         else
             this.varString = "var";
-        return this.createTree(element, options.isParent, "el", options.tabLevel, options.removeEmpty, options.templateLiterals, options.paddingType, options.functional);
+        if (options.templateLiterals && options.ES6)
+            this.templateLiterals = true;
+        else
+            this.templateLiterals = false;
+        if (options.paddingType !== undefined)
+            this.paddingType = options.paddingType;
+        this.parentName = options.parentName;
+        this.childName = options.childName;
+        return this.createTree(element, options.isParent, this.parentName, options.tabLevel, options.removeEmpty, options.templateLiterals, options.functional);
     }
-    static createTree(el, parent, varName, level, removeEmpty, templateLiterals, paddingType, functional) {
+    static createTree(el, parent, varName, level, removeEmpty, templateLiterals, functional) {
         let out = "";
         if (el.nodeType === Node.ELEMENT_NODE) {
             out += this.funcString;
             if (level && functional)
-                out += this.addPadding(level, paddingType);
+                out += this.addPadding(level);
             out += this.varString + " " + varName + ` = document.createElement("` + el.tagName.toLowerCase() + `");`;
             if (level || !functional)
-                out += this.addPadding(level, paddingType);
+                out += this.addPadding(level);
             if (el.hasAttributes && el.hasAttributes())
                 for (let i = 0; i < el.attributes.length; i++) {
                     let attrib = el.attributes[i];
-                    out += varName + '.setAttribute("' + attrib.name + '", ' + this.encapsulate(attrib.value, templateLiterals) + ');';
+                    out += varName + '.setAttribute("' + attrib.name + '", ' + this.encapsulate(attrib.value) + ');';
                     if (level || !functional)
-                        out += this.addPadding(level, paddingType);
+                        out += this.addPadding(level);
                 }
-            let children = el.childNodes;
-            out += Array.from(children)
+            out += Array.from(el.childNodes)
                 .filter((child) => {
                 return !(removeEmpty && child.nodeType === Node.TEXT_NODE && !child.data.trim().length);
             })
                 .map((child, index) => {
-                let childName = functional ? "el" : varName + "Child" + (index + 1);
+                let childName = functional ? this.parentName : varName + this.childName + this.numberToLetter(index);
                 return [
                     childName,
-                    this.createTree(child, !functional, childName, !functional ? 0 : (level ? level + 1 : 0), removeEmpty, templateLiterals, paddingType, functional)
+                    this.createTree(child, !functional, childName, !functional ? 0 : (level ? level + 1 : 0), removeEmpty, templateLiterals, functional)
                 ];
             })
                 .map((child, index) => {
                 if (functional)
                     return varName + ".appendChild(" + child[1] + ");";
                 else
-                    return child[1] + this.addPadding(level, paddingType) + varName + ".appendChild(" + child[0] + ");";
+                    return child[1] + this.addPadding(level) + varName + ".appendChild(" + child[0] + ");";
             })
                 .filter(child => child.length)
-                .join(level || !functional ? this.addPadding(level, paddingType) : "");
+                .join(level || !functional ? this.addPadding(level) : "");
             if (functional) {
                 if (level)
-                    out += this.addPadding(level, paddingType);
+                    out += this.addPadding(level);
                 out += "return el;";
                 if (level)
-                    out += this.addPadding(level - 1, paddingType);
+                    out += this.addPadding(level - 1);
                 out += "})()" + (parent ? ";" : "");
             }
         }
         else if (el.nodeType === Node.TEXT_NODE) {
             if (!removeEmpty || removeEmpty && (el.data = el.data.trim()) && el.data.length !== 0)
-                out += (!functional ? this.varString + " " + varName + " = " : "") + "document.createTextNode(" + this.encapsulate(el.data, templateLiterals) + ")" + (parent ? ";" : "");
+                out += (!functional ? this.varString + " " + varName + " = " : "") + "document.createTextNode(" + this.encapsulate(el.data) + ")" + (parent ? ";" : "");
         }
         return out;
     }
-    static encapsulate(string, templateLiterals) {
-        if (templateLiterals)
+    static encapsulate(string) {
+        if (this.templateLiterals)
             return "`" + string + "`";
         else
             return JSON.stringify(string);
     }
-    static addPadding(level, type) {
+    static addPadding(level) {
         let indent;
         let out = "";
         if (level) {
-            if (type < 1)
+            if (this.paddingType < 1)
                 indent = "\t";
             else
-                indent = " ".repeat(type);
+                indent = " ".repeat(this.paddingType);
             out = "\n" + indent.repeat(level);
         }
         else {
@@ -94,11 +117,23 @@ class HTML2JS {
         return out;
     }
     static numberToLetter(index) {
-        return "";
+        let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let digits = [];
+        // basically the same thing as convering base 10 to base 26
+        do {
+            let remainder = index % 26;
+            index = (index - remainder) / 26;
+            digits.push(alphabet[remainder]);
+        } while (index != 0);
+        return digits.reverse().join("");
     }
 }
 HTML2JS.funcString = "(() => {";
 HTML2JS.varString = "let";
+HTML2JS.templateLiterals = false;
+HTML2JS.paddingType = 4;
+HTML2JS.parentName = "el";
+HTML2JS.childName = "Ch";
 exports.HTML2JS = HTML2JS;
 
 },{}],2:[function(require,module,exports){
@@ -122,7 +157,10 @@ const htmlconverter_1 = require("./htmlconverter");
             templateLiterals: document.querySelector("#templateLiterals"),
             padding: document.querySelector("#padding"),
             functional: document.querySelector("#functional"),
-            ES6: document.querySelector("#ES6")
+            ES6: document.querySelector("#ES6"),
+            parentName: document.querySelector("#parentName"),
+            childName: document.querySelector("#childName"),
+            childNameContainer: document.querySelector(".c-container")
         };
         DOM.convertBtn.addEventListener("click", () => {
             let inputHtml = parseHTML(DOM.input.value);
@@ -132,10 +170,22 @@ const htmlconverter_1 = require("./htmlconverter");
             let padding = ~~DOM.padding.value;
             let functional = !!DOM.functional.checked;
             let ES6 = !!DOM.ES6.checked;
+            let parentName = DOM.parentName.value;
+            let childName = DOM.childName.value;
             while (DOM.output.lastChild) //remove all children from #outputs
                 DOM.output.removeChild(DOM.output.lastChild);
             for (let child of inputHtml.childNodes) { //add new children
-                let output, tree = htmlconverter_1.HTML2JS.create(child, { functional: functional, ES6: ES6, isParent: true, tabLevel: functional && beautify ? 1 : 0, removeEmpty: removeEmpty, templateLiterals: templateLiterals, paddingType: padding });
+                let output, tree = htmlconverter_1.HTML2JS.create(child, {
+                    functional: functional,
+                    ES6: ES6,
+                    isParent: true,
+                    tabLevel: functional && beautify ? 1 : 0,
+                    removeEmpty: removeEmpty,
+                    templateLiterals: templateLiterals,
+                    paddingType: padding,
+                    childName: childName,
+                    parentName: parentName
+                });
                 if (removeEmpty && tree.length === 0)
                     continue;
                 DOM.output.appendChild((() => {
@@ -194,10 +244,14 @@ const htmlconverter_1 = require("./htmlconverter");
         });
         DOM.functional.addEventListener("change", () => {
             //show padding selector
-            if (DOM.functional.checked)
+            if (DOM.functional.checked) {
                 DOM.beautifyContainer.classList.add("show");
-            else
+                DOM.childNameContainer.classList.remove("show");
+            }
+            else {
                 DOM.beautifyContainer.classList.remove("show");
+                DOM.childNameContainer.classList.add("show");
+            }
         });
         DOM.ES6.addEventListener("change", () => {
             if (DOM.templateLiterals.checked && !DOM.ES6.checked)
