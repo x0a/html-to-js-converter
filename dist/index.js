@@ -18,18 +18,24 @@ class HTML2JS {
             options.paddingType = 4;
         if (options.isParent === undefined)
             options.isParent = true;
-        if (options.parentName === undefined || options.parentName.length < 2)
+        if (options.parentName === undefined)
             options.parentName = "el";
-        if (options.childName === undefined || options.childName.length < 2)
-            options.childName = "Ch";
+        if (options.childName === undefined)
+            options.childName = "el";
+        if (options.removeEmpty === undefined)
+            options.removeEmpty = true;
+        if (options.functional === undefined)
+            options.functional = true;
         if (options.functional) {
             if (options.ES6)
                 this.funcString = "(() => {";
             else
                 this.funcString = "(function(){";
+            this.functional = true;
         }
         else {
             this.funcString = "";
+            this.functional = false;
         }
         if (options.ES6)
             this.varString = "let";
@@ -39,82 +45,83 @@ class HTML2JS {
             this.templateLiterals = true;
         else
             this.templateLiterals = false;
-        if (options.paddingType !== undefined)
-            this.paddingType = options.paddingType;
+        this.paddingType = options.paddingType;
         this.parentName = options.parentName;
         this.childName = options.childName;
-        return this.createTree(element, options.isParent, this.parentName, options.tabLevel, options.removeEmpty, options.templateLiterals, options.functional);
+        this.removeEmpty = options.removeEmpty;
+        return this.createTree(element, options.isParent, this.parentName, options.tabLevel);
     }
-    static createTree(el, parent, varName, level, removeEmpty, templateLiterals, functional) {
-        let out = "";
+    static createTree(el, parent, varName, blockLevel) {
+        let out = [];
         if (el.nodeType === Node.ELEMENT_NODE) {
-            out += this.funcString;
-            if (level && functional)
-                out += this.addPadding(level);
-            out += this.varString + " " + varName + ` = document.createElement("` + el.tagName.toLowerCase() + `");`;
-            if (level || !functional)
-                out += this.addPadding(level);
+            if (this.functional)
+                out.push(this.funcString);
+            out.push(this.getPadding(this.functional && blockLevel)
+                + this.varString + " " + varName
+                + ' = document.createElement("' + el.tagName.toLowerCase() + '");');
             if (el.hasAttributes && el.hasAttributes())
                 for (let i = 0; i < el.attributes.length; i++) {
                     let attrib = el.attributes[i];
-                    out += varName + '.setAttribute("' + attrib.name + '", ' + this.encapsulate(attrib.value) + ');';
-                    if (level || !functional)
-                        out += this.addPadding(level);
+                    out.push(this.getPadding(this.functional && blockLevel)
+                        + varName + '.setAttribute("'
+                        + attrib.name + '", '
+                        + this.encapsulate(attrib.value) + ');');
                 }
-            out += Array.from(el.childNodes)
-                .filter((child) => {
-                return !(removeEmpty && child.nodeType === Node.TEXT_NODE && !child.data.trim().length);
-            })
+            let children = Array
+                .from(el.childNodes)
                 .map((child, index) => {
-                let childName = functional ? this.parentName : varName + this.childName + this.numberToLetter(index);
+                let childName = this.functional ? this.childName : varName + this.childName + this.numberToLetter(index);
                 return [
                     childName,
-                    this.createTree(child, !functional, childName, !functional ? 0 : (level ? level + 1 : 0), removeEmpty, templateLiterals, functional)
+                    this.createTree(child, !this.functional, childName, !this.functional ? 0 : (blockLevel ? blockLevel + 1 : 0))
                 ];
             })
-                .map((child, index) => {
-                if (functional)
-                    return varName + ".appendChild(" + child[1] + ");";
-                else
-                    return child[1] + this.addPadding(level) + varName + ".appendChild(" + child[0] + ");";
+                .filter(child => {
+                return child[1].length;
             })
-                .filter(child => child.length)
-                .join(level || !functional ? this.addPadding(level) : "");
-            if (functional) {
-                if (level)
-                    out += this.addPadding(level);
-                out += "return el;";
-                if (level)
-                    out += this.addPadding(level - 1);
-                out += "})()" + (parent ? ";" : "");
+                .map(child => {
+                if (this.functional)
+                    return [this.getPadding(blockLevel) + varName + ".appendChild(" + child[1] + ");"];
+                else
+                    return [child[1], varName + ".appendChild(" + child[0] + ");"];
+            });
+            if (children.length)
+                children
+                    .reduce((lines, line) => lines.concat(line))
+                    .forEach(line => out.push(line));
+            if (this.functional) {
+                out.push(this.getPadding(blockLevel) + "return el;");
+                out.push(this.getPadding(blockLevel - 1) + "})()" + (parent ? ";" : ""));
             }
         }
         else if (el.nodeType === Node.TEXT_NODE) {
-            if (!removeEmpty || removeEmpty && (el.data = el.data.trim()) && el.data.length !== 0)
-                out += (!functional ? this.varString + " " + varName + " = " : "") + "document.createTextNode(" + this.encapsulate(el.data) + ")" + (parent ? ";" : "");
+            let text;
+            if (!this.removeEmpty || (this.removeEmpty && (text = el.data.trim()) && text.length))
+                out.push((!this.functional ? this.varString + " " + varName + " = " : "")
+                    + "document.createTextNode("
+                    + this.encapsulate(el.data)
+                    + ")" + (parent ? ";" : ""));
         }
-        return out;
+        return out.join(blockLevel || !this.functional ? "\n" : "");
     }
     static encapsulate(string) {
         if (this.templateLiterals)
-            return "`" + string + "`";
+            return "`" + string.replace(/\`/g, "\\\`") + "`";
         else
             return JSON.stringify(string);
     }
-    static addPadding(level) {
+    static getPadding(blockLevel) {
         let indent;
-        let out = "";
-        if (level) {
+        if (blockLevel > 0) {
             if (this.paddingType < 1)
                 indent = "\t";
             else
                 indent = " ".repeat(this.paddingType);
-            out = "\n" + indent.repeat(level);
+            return indent.repeat(blockLevel);
         }
         else {
-            out = "\n";
+            return "";
         }
-        return out;
     }
     static numberToLetter(index) {
         let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -129,11 +136,14 @@ class HTML2JS {
     }
 }
 HTML2JS.funcString = "(() => {";
+HTML2JS.functional = true;
 HTML2JS.varString = "let";
 HTML2JS.templateLiterals = false;
 HTML2JS.paddingType = 4;
+HTML2JS.beautify = true;
 HTML2JS.parentName = "el";
 HTML2JS.childName = "Ch";
+HTML2JS.removeEmpty = true;
 exports.HTML2JS = HTML2JS;
 
 },{}],2:[function(require,module,exports){
@@ -193,7 +203,7 @@ const htmlconverter_1 = require("./htmlconverter");
                     el.setAttribute("class", "jscontainer");
                     el.appendChild(output = (() => {
                         let el = document.createElement("code");
-                        el.innerHTML = tree;
+                        el.textContent = tree;
                         el.setAttribute("class", "javascript");
                         return el;
                     })());
@@ -246,11 +256,13 @@ const htmlconverter_1 = require("./htmlconverter");
             //show padding selector
             if (DOM.functional.checked) {
                 DOM.beautifyContainer.classList.add("show");
-                DOM.childNameContainer.classList.remove("show");
+                if (DOM.childName.value !== "el")
+                    DOM.childName.value = "el";
             }
             else {
                 DOM.beautifyContainer.classList.remove("show");
-                DOM.childNameContainer.classList.add("show");
+                if (DOM.childName.value === "el")
+                    DOM.childName.value = "Ch";
             }
         });
         DOM.ES6.addEventListener("change", () => {
@@ -260,6 +272,18 @@ const htmlconverter_1 = require("./htmlconverter");
         DOM.templateLiterals.addEventListener("change", () => {
             if (DOM.templateLiterals.checked && !DOM.ES6.checked)
                 DOM.ES6.checked = true;
+        });
+        DOM.parentName.addEventListener("keyup", () => {
+            if (!DOM.parentName.value.length) {
+                if (!DOM.parentName.classList.contains("is-invalid"))
+                    DOM.parentName.classList.add("is-invalid");
+            }
+            else
+                DOM.parentName.classList.remove("is-invalid");
+        });
+        DOM.parentName.addEventListener("change", () => {
+            if (DOM.parentName.value.length < 1)
+                DOM.parentName.value = "el";
         });
         DOM.input.value = testHtml;
         DOM.convertBtn.click();

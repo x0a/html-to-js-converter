@@ -64,14 +64,13 @@ interface DOM{
                         functional: functional,
                         ES6: ES6,
                         isParent: true, 
-                        tabLevel: functional && beautify ? 1 : 0, 
+                        tabLevel: functional && beautify ? 1 : 0, //setting tab level to 1 automatically enables beautification
                         removeEmpty: removeEmpty, 
                         templateLiterals: templateLiterals, 
                         paddingType: padding,
                         childName: childName,
                         parentName: parentName
                     });
-
                 if(removeEmpty && tree.length === 0) continue;
 
                 DOM.output.appendChild((() => {
@@ -79,7 +78,7 @@ interface DOM{
                     el.setAttribute("class", "jscontainer");
                     el.appendChild(output = (() => {
                         let el = document.createElement("code");
-                        el.innerHTML = tree
+                        el.textContent = tree
                         el.setAttribute("class", "javascript");
                         return el;
                     })());
@@ -140,10 +139,10 @@ interface DOM{
             //show padding selector
             if(DOM.functional.checked){
                 DOM.beautifyContainer.classList.add("show");
-                DOM.childNameContainer.classList.remove("show");
+                if(DOM.childName.value !== "el") DOM.childName.value = "el";
             }else{
                 DOM.beautifyContainer.classList.remove("show");
-                DOM.childNameContainer.classList.add("show");
+                if(DOM.childName.value === "el") DOM.childName.value = "Ch";
             }
         })
 
@@ -155,6 +154,18 @@ interface DOM{
         DOM.templateLiterals.addEventListener("change", () => {
             if(DOM.templateLiterals.checked && !DOM.ES6.checked)
                 DOM.ES6.checked = true;
+        })
+
+        DOM.parentName.addEventListener("keyup", () => {
+            if(!DOM.parentName.value.length){
+                if(!DOM.parentName.classList.contains("is-invalid"))
+                    DOM.parentName.classList.add("is-invalid")
+            }else
+                DOM.parentName.classList.remove("is-invalid")
+        })
+        DOM.parentName.addEventListener("change", () => {
+            if(DOM.parentName.value.length < 1)
+                DOM.parentName.value = "el";
         })
 
         DOM.input.value = testHtml;
