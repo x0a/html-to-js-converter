@@ -57,7 +57,7 @@ interface DOM {
                 DOM.output.removeChild(DOM.output.lastChild);
 
             let fragment = document.createDocumentFragment();
-            console.log(inputHtml);
+            
             for (let child of <any>inputHtml.childNodes) { //add new children
                 let output: HTMLElement,
                     tree = HTML2JS.create(child, {

@@ -214,7 +214,6 @@ const htmlconverter_1 = require("./htmlconverter");
             while (DOM.output.lastChild) //remove all children from #outputs
                 DOM.output.removeChild(DOM.output.lastChild);
             let fragment = document.createDocumentFragment();
-            console.log(inputHtml);
             for (let child of inputHtml.childNodes) { //add new children
                 let output, tree = htmlconverter_1.HTML2JS.create(child, {
                     functional: functional,
