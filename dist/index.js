@@ -64,6 +64,7 @@ class HTML2JS {
                 + ' = '
                 + this.getAccessString(el)
                 + ";");
+            let len = out.length;
             if (el.hasAttributes && el.hasAttributes())
                 for (let i = 0; i < el.attributes.length; i++) {
                     let attrib = el.attributes[i];
@@ -103,6 +104,8 @@ class HTML2JS {
                 children
                     .reduce((lines, line) => lines.concat(line))
                     .forEach((line) => out.push(line));
+            if (out.length === len && !this.canBeInserted(el))
+                return "";
             if (this.functional) {
                 out.push(this.getPadding(blockLevel) + "return " + varName + ";");
                 out.push(this.getPadding(blockLevel - 1) + "})()" + (parent ? ";" : ""));
