@@ -10,6 +10,10 @@ interface ParserOptions {
     parentName?: string,
 }
 
+const VARNAME = 0;
+const INSERTABLE = 1;
+const TREE = 2;
+
 export class HTML2JS {
     private static funcString = "(() => {";
     private static functional = true;
@@ -76,7 +80,9 @@ export class HTML2JS {
             out.push(
                 this.getPadding(this.functional && blockLevel)
                 + this.varString + " " + varName
-                + ' = document.createElement("' + el.tagName.toLowerCase() + '");'
+                + ' = '
+                + this.getAccessString(el)
+                + ";"
             );
 
             if (el.hasAttributes && el.hasAttributes())
@@ -93,34 +99,43 @@ export class HTML2JS {
 
             let children = Array
                 .from(el.childNodes)
-                .map((child, index) => {
+                .map((child: any, index) => {
                     let childName = this.functional ? this.childName : varName + this.childName + this.numberToLetter(index);
                     return [
                         childName,
+                        this.canBeInserted(child),
                         this.createTree(child, !this.functional, childName, !this.functional ? 0 : (blockLevel ? blockLevel + 1 : 0))
                     ];
                 })
-                .filter(child => {
-                    return child[1].length;
+                .filter((child: any) => {
+                    return child[TREE].length;
                 })
-                .map(child => {
-                    if (this.functional)
-                        return [this.getPadding(blockLevel) + varName + ".appendChild(" + child[1] + ");"];
-                    else
-                        return [child[1], varName + ".appendChild(" + child[0] + ");"];
+                .map((child) => {
+                    if(child[INSERTABLE]){
+                        if (this.functional)
+                            return [this.getPadding(blockLevel) + varName + ".appendChild(" + child[TREE] + ");"];
+                        else
+                            return [child[TREE], varName + ".appendChild(" + child[VARNAME] + ");"];
+                    }else{
+                        if (this.functional)
+                            return [this.getPadding(blockLevel) +  child[TREE] + ";"];
+                        else
+                            return [child[TREE]];
+                    }
                 });
 
             if(children.length) children
                 .reduce((lines, line) => lines.concat(line))
-                .forEach(line => out.push(line));
+                .forEach((line: any) => out.push(line));
 
 
             if (this.functional) {
-                out.push(this.getPadding(blockLevel) + "return el;");
+                out.push(this.getPadding(blockLevel) + "return " + varName + ";");
                 out.push(this.getPadding(blockLevel - 1) + "})()" + (parent ? ";" : ""));
             }
         } else if (el.nodeType === Node.TEXT_NODE) {
             let text:string;
+
             if (!this.removeEmpty || (this.removeEmpty && (text = el.data.trim()) && text.length)) 
                 out.push(
                     (!this.functional ? this.varString + " " + varName + " = " : "")
@@ -129,9 +144,25 @@ export class HTML2JS {
                     + ")" + (parent ? ";" : "")
                 );
         }
+
         return out.join(blockLevel || !this.functional ? "\n" : "");
     }
-
+    private static canBeInserted(el: HTMLElement): boolean{
+        if(el.tagName === "HTML" || el.tagName === "HEAD" || el.tagName === "BODY")
+            return false;
+        else
+            return true;
+    }
+    private static getAccessString(el: HTMLElement): string{
+        if(el.tagName === "HTML")
+            return "document.documentElement"
+        else if(el.tagName === "HEAD")
+            return "document.head";
+        else if(el.tagName === "BODY")
+            return "document.body";
+        else 
+            return 'document.createElement("' + el.tagName.toLowerCase() + '")';
+    }
     private static encapsulate(string: string): string {
         if (this.templateLiterals)
             return "`" + string.replace(/\`/g, "\\\`") + "`";

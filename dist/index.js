@@ -1,6 +1,9 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const VARNAME = 0;
+const INSERTABLE = 1;
+const TREE = 2;
 class HTML2JS {
     static create(element, options) {
         //disabling ES6 should also disable template literals
@@ -58,7 +61,9 @@ class HTML2JS {
                 out.push(this.funcString);
             out.push(this.getPadding(this.functional && blockLevel)
                 + this.varString + " " + varName
-                + ' = document.createElement("' + el.tagName.toLowerCase() + '");');
+                + ' = '
+                + this.getAccessString(el)
+                + ";");
             if (el.hasAttributes && el.hasAttributes())
                 for (let i = 0; i < el.attributes.length; i++) {
                     let attrib = el.attributes[i];
@@ -73,24 +78,33 @@ class HTML2JS {
                 let childName = this.functional ? this.childName : varName + this.childName + this.numberToLetter(index);
                 return [
                     childName,
+                    this.canBeInserted(child),
                     this.createTree(child, !this.functional, childName, !this.functional ? 0 : (blockLevel ? blockLevel + 1 : 0))
                 ];
             })
-                .filter(child => {
-                return child[1].length;
+                .filter((child) => {
+                return child[TREE].length;
             })
-                .map(child => {
-                if (this.functional)
-                    return [this.getPadding(blockLevel) + varName + ".appendChild(" + child[1] + ");"];
-                else
-                    return [child[1], varName + ".appendChild(" + child[0] + ");"];
+                .map((child) => {
+                if (child[INSERTABLE]) {
+                    if (this.functional)
+                        return [this.getPadding(blockLevel) + varName + ".appendChild(" + child[TREE] + ");"];
+                    else
+                        return [child[TREE], varName + ".appendChild(" + child[VARNAME] + ");"];
+                }
+                else {
+                    if (this.functional)
+                        return [this.getPadding(blockLevel) + child[TREE] + ";"];
+                    else
+                        return [child[TREE]];
+                }
             });
             if (children.length)
                 children
                     .reduce((lines, line) => lines.concat(line))
-                    .forEach(line => out.push(line));
+                    .forEach((line) => out.push(line));
             if (this.functional) {
-                out.push(this.getPadding(blockLevel) + "return el;");
+                out.push(this.getPadding(blockLevel) + "return " + varName + ";");
                 out.push(this.getPadding(blockLevel - 1) + "})()" + (parent ? ";" : ""));
             }
         }
@@ -103,6 +117,22 @@ class HTML2JS {
                     + ")" + (parent ? ";" : ""));
         }
         return out.join(blockLevel || !this.functional ? "\n" : "");
+    }
+    static canBeInserted(el) {
+        if (el.tagName === "HTML" || el.tagName === "HEAD" || el.tagName === "BODY")
+            return false;
+        else
+            return true;
+    }
+    static getAccessString(el) {
+        if (el.tagName === "HTML")
+            return "document.documentElement";
+        else if (el.tagName === "HEAD")
+            return "document.head";
+        else if (el.tagName === "BODY")
+            return "document.body";
+        else
+            return 'document.createElement("' + el.tagName.toLowerCase() + '")';
     }
     static encapsulate(string) {
         if (this.templateLiterals)
@@ -183,6 +213,8 @@ const htmlconverter_1 = require("./htmlconverter");
             let childName = DOM.childName.value;
             while (DOM.output.lastChild) //remove all children from #outputs
                 DOM.output.removeChild(DOM.output.lastChild);
+            let fragment = document.createDocumentFragment();
+            console.log(inputHtml);
             for (let child of inputHtml.childNodes) { //add new children
                 let output, tree = htmlconverter_1.HTML2JS.create(child, {
                     functional: functional,
@@ -197,7 +229,7 @@ const htmlconverter_1 = require("./htmlconverter");
                 });
                 if (removeEmpty && tree.length === 0)
                     continue;
-                DOM.output.appendChild((() => {
+                fragment.appendChild((() => {
                     let el = document.createElement("pre");
                     el.setAttribute("class", "jscontainer");
                     el.appendChild(output = (() => {
@@ -224,6 +256,7 @@ const htmlconverter_1 = require("./htmlconverter");
                 })());
                 hljs.highlightBlock(output); //add syntax highlighting
             }
+            DOM.output.appendChild(fragment);
         });
         DOM.input.addEventListener("keydown", function (event) {
             //allow use of tab key in html editor
@@ -298,7 +331,13 @@ const htmlconverter_1 = require("./htmlconverter");
         }
     });
     function parseHTML(markup) {
-        if ('content' in document.createElement('template')) {
+        let beginsWith = markup.substring(0, 6).toLowerCase().trim();
+        if (beginsWith === "<!doct" || beginsWith === "<html>" || beginsWith === "<head>" || beginsWith === "<body>") {
+            let doc = document.implementation.createHTMLDocument("");
+            doc.documentElement.innerHTML = markup;
+            return doc;
+        }
+        else if ('content' in document.createElement('template')) {
             // Template tag exists!
             let el = document.createElement('template');
             el.innerHTML = markup;

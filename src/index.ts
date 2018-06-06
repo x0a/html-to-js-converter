@@ -1,7 +1,7 @@
-declare const hljs:any;
-import {HTML2JS} from "./htmlconverter";
+declare const hljs: any;
+import { HTML2JS } from "./htmlconverter";
 
-interface DOM{
+interface DOM {
     output: HTMLDivElement,
     input: HTMLTextAreaElement,
     convertBtn: HTMLButtonElement,
@@ -18,7 +18,7 @@ interface DOM{
 }
 
 
-(function(window: Window, document: Document, undefined?:any){
+(function (window: Window, document: Document, undefined?: any) {
 
     let testHtml = `<ul id="fruits">
     <li class="apple">Apple</li>
@@ -27,7 +27,7 @@ interface DOM{
 </ul>`;
 
     document.addEventListener("DOMContentLoaded", () => {
-        const DOM:DOM = {
+        const DOM: DOM = {
             output: document.querySelector("#outputs"),
             input: document.querySelector("#input"),
             convertBtn: document.querySelector("#convertBtn"),
@@ -41,7 +41,7 @@ interface DOM{
             parentName: document.querySelector("#parentName"),
             childName: document.querySelector("#childName")
         }
-        
+
         DOM.convertBtn.addEventListener("click", () => {
             let inputHtml = parseHTML(DOM.input.value);
             let removeEmpty = !!DOM.emptyNodes.checked;
@@ -53,25 +53,27 @@ interface DOM{
             let parentName = DOM.parentName.value;
             let childName = DOM.childName.value;
 
-            while(DOM.output.lastChild) //remove all children from #outputs
+            while (DOM.output.lastChild) //remove all children from #outputs
                 DOM.output.removeChild(DOM.output.lastChild);
-    
-            for(let child of <any>inputHtml.childNodes){ //add new children
-                let output:HTMLElement,
+
+            let fragment = document.createDocumentFragment();
+            console.log(inputHtml);
+            for (let child of <any>inputHtml.childNodes) { //add new children
+                let output: HTMLElement,
                     tree = HTML2JS.create(child, {
                         functional: functional,
                         ES6: ES6,
-                        isParent: true, 
+                        isParent: true,
                         tabLevel: functional && beautify ? 1 : 0, //setting tab level to 1 automatically enables beautification
-                        removeEmpty: removeEmpty, 
-                        templateLiterals: templateLiterals, 
+                        removeEmpty: removeEmpty,
+                        templateLiterals: templateLiterals,
                         paddingType: padding,
                         childName: childName,
                         parentName: parentName
                     });
-                if(removeEmpty && tree.length === 0) continue;
+                if (removeEmpty && tree.length === 0) continue;
 
-                DOM.output.appendChild((() => {
+                fragment.appendChild((() => {
                     let el = document.createElement("pre");
                     el.setAttribute("class", "jscontainer");
                     el.appendChild(output = (() => {
@@ -96,32 +98,33 @@ interface DOM{
                     })());
                     return el;
                 })());
-    
+
                 hljs.highlightBlock(output); //add syntax highlighting
             }
-            
+
+            DOM.output.appendChild(fragment);
         })
 
-        DOM.input.addEventListener("keydown", function(event){
+        DOM.input.addEventListener("keydown", function (event) {
             //allow use of tab key in html editor
 
             let key = event.keyCode || event.which || 0;
             let oldSelectionStart;
             let padding;
 
-            if(key === 9 || key === 13){
+            if (key === 9 || key === 13) {
                 event.preventDefault();
                 oldSelectionStart = this.selectionStart;
                 padding = ~~DOM.padding.value;
             }
 
-            if(key === 9){
+            if (key === 9) {
                 let padding = ~~DOM.padding.value;
                 let add = padding < 1 ? "\t" : " ".repeat(padding);
 
                 this.value = this.value.substring(0, this.selectionStart) + add + this.value.substring(this.selectionEnd);
-                this.selectionEnd = oldSelectionStart + add.length; 
-            }else if(key === 13){
+                this.selectionEnd = oldSelectionStart + add.length;
+            } else if (key === 13) {
                 let lastLn = this.value.lastIndexOf("\n", oldSelectionStart - 1);
                 let lastLine = this.value.substring(lastLn + 1, oldSelectionStart); //from selection, get last 
                 let deWhiteSpace = lastLine.trim();
@@ -135,34 +138,34 @@ interface DOM{
 
         DOM.functional.addEventListener("change", () => {
             //show padding selector
-            if(DOM.functional.checked){
+            if (DOM.functional.checked) {
                 DOM.beautifyContainer.classList.add("show");
-                if(DOM.childName.value !== "el") DOM.childName.value = "el";
-            }else{
+                if (DOM.childName.value !== "el") DOM.childName.value = "el";
+            } else {
                 DOM.beautifyContainer.classList.remove("show");
-                if(DOM.childName.value === "el") DOM.childName.value = "Ch";
+                if (DOM.childName.value === "el") DOM.childName.value = "Ch";
             }
         })
 
         DOM.ES6.addEventListener("change", () => {
-            if(DOM.templateLiterals.checked && !DOM.ES6.checked)
+            if (DOM.templateLiterals.checked && !DOM.ES6.checked)
                 DOM.templateLiterals.checked = false;
         })
 
         DOM.templateLiterals.addEventListener("change", () => {
-            if(DOM.templateLiterals.checked && !DOM.ES6.checked)
+            if (DOM.templateLiterals.checked && !DOM.ES6.checked)
                 DOM.ES6.checked = true;
         })
 
         DOM.parentName.addEventListener("keyup", () => {
-            if(!DOM.parentName.value.length){
-                if(!DOM.parentName.classList.contains("is-invalid"))
+            if (!DOM.parentName.value.length) {
+                if (!DOM.parentName.classList.contains("is-invalid"))
                     DOM.parentName.classList.add("is-invalid")
-            }else
+            } else
                 DOM.parentName.classList.remove("is-invalid")
         })
         DOM.parentName.addEventListener("change", () => {
-            if(DOM.parentName.value.length < 1){
+            if (DOM.parentName.value.length < 1) {
                 DOM.parentName.value = "el";
                 DOM.parentName.classList.remove("is-invalid");
             }
@@ -171,19 +174,25 @@ interface DOM{
         DOM.input.value = testHtml;
         DOM.convertBtn.click();
 
-        for(let name in DOM){
+        for (let name in DOM) {
             //changing any settings other than #input and #output should result in the conversion being re-done
-            if(name !== "input" && name !== "output")
+            if (name !== "input" && name !== "output")
                 watch(DOM[name]);
         }
 
-        function watch(el: HTMLElement): void{
+        function watch(el: HTMLElement): void {
             el.addEventListener("change", () => DOM.convertBtn.click())
         }
     })
 
     function parseHTML(markup: string): DocumentFragment {
-        if ('content' in document.createElement('template')) {
+        let beginsWith = markup.substring(0, 6).toLowerCase().trim();
+
+        if (beginsWith === "<!doct" || beginsWith === "<html>" ||beginsWith === "<head>" || beginsWith === "<body>") {
+			let doc = document.implementation.createHTMLDocument("");
+			doc.documentElement.innerHTML = markup;
+			return doc;
+		} else if ('content' in document.createElement('template')) {
             // Template tag exists!
             let el = document.createElement('template');
             el.innerHTML = markup;
