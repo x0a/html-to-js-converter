@@ -19,6 +19,7 @@ interface DOM {
 
 
 (function (window: Window, document: Document, undefined?: any) {
+    "use strict";
 
     let testHtml = `<ul id="fruits">
     <li class="apple">Apple</li>
@@ -40,7 +41,7 @@ interface DOM {
             ES6: document.querySelector("#ES6"),
             parentName: document.querySelector("#parentName"),
             childName: document.querySelector("#childName")
-        }
+        };
 
         DOM.convertBtn.addEventListener("click", () => {
             let inputHtml = parseHTML(DOM.input.value);
@@ -57,7 +58,7 @@ interface DOM {
                 DOM.output.removeChild(DOM.output.lastChild);
 
             let fragment = document.createDocumentFragment();
-            
+
             for (let child of <any>inputHtml.childNodes) { //add new children
                 let output: HTMLElement,
                     tree = HTML2JS.create(child, {
@@ -103,38 +104,35 @@ interface DOM {
             }
 
             DOM.output.appendChild(fragment);
-        })
+        });
 
         DOM.input.addEventListener("keydown", function (event) {
             //allow use of tab key in html editor
 
             let key = event.keyCode || event.which || 0;
             let oldSelectionStart;
-            let padding;
+            let padding, add = "";
 
             if (key === 9 || key === 13) {
                 event.preventDefault();
                 oldSelectionStart = this.selectionStart;
                 padding = ~~DOM.padding.value;
-            }
+            } else return;
 
             if (key === 9) {
                 let padding = ~~DOM.padding.value;
-                let add = padding < 1 ? "\t" : " ".repeat(padding);
-
-                this.value = this.value.substring(0, this.selectionStart) + add + this.value.substring(this.selectionEnd);
-                this.selectionEnd = oldSelectionStart + add.length;
+                add = padding < 1 ? "\t" : " ".repeat(padding);
             } else if (key === 13) {
                 let lastLn = this.value.lastIndexOf("\n", oldSelectionStart - 1);
                 let lastLine = this.value.substring(lastLn + 1, oldSelectionStart); //from selection, get last 
                 let deWhiteSpace = lastLine.trim();
                 let whiteSpaceEnd = deWhiteSpace.length ? lastLine.indexOf(deWhiteSpace) : undefined;
-                let whiteSpace = lastLine.substring(0, whiteSpaceEnd);
-
-                this.value = this.value.substring(0, oldSelectionStart) + "\n" + whiteSpace + this.value.substring(this.selectionEnd);
-                this.selectionEnd = oldSelectionStart + whiteSpace.length + 1;
+                add = "\n" + lastLine.substring(0, whiteSpaceEnd);
             }
-        })
+
+            this.value = this.value.substring(0, oldSelectionStart) + add + this.value.substring(this.selectionEnd);
+            this.selectionEnd = oldSelectionStart + add.length;
+        });
 
         DOM.functional.addEventListener("change", () => {
             //show padding selector
@@ -145,17 +143,17 @@ interface DOM {
                 DOM.beautifyContainer.classList.remove("show");
                 if (DOM.childName.value === "el") DOM.childName.value = "Ch";
             }
-        })
+        });
 
         DOM.ES6.addEventListener("change", () => {
             if (DOM.templateLiterals.checked && !DOM.ES6.checked)
                 DOM.templateLiterals.checked = false;
-        })
+        });
 
         DOM.templateLiterals.addEventListener("change", () => {
             if (DOM.templateLiterals.checked && !DOM.ES6.checked)
                 DOM.ES6.checked = true;
-        })
+        });
 
         DOM.parentName.addEventListener("keyup", () => {
             if (!DOM.parentName.value.length) {
@@ -163,13 +161,29 @@ interface DOM {
                     DOM.parentName.classList.add("is-invalid")
             } else
                 DOM.parentName.classList.remove("is-invalid")
-        })
+        });
+
         DOM.parentName.addEventListener("change", () => {
             if (DOM.parentName.value.length < 1) {
                 DOM.parentName.value = "el";
                 DOM.parentName.classList.remove("is-invalid");
             }
-        })
+        });
+        
+        DOM.childName.addEventListener("keyup", () => {
+            if (!DOM.childName.value.length) {
+                if (!DOM.childName.classList.contains("is-invalid"))
+                    DOM.childName.classList.add("is-invalid")
+            } else
+                DOM.childName.classList.remove("is-invalid")
+        });
+
+        DOM.childName.addEventListener("change", () => {
+            if (DOM.childName.value.length < 1) {
+                DOM.childName.value = "el";
+                DOM.childName.classList.remove("is-invalid");
+            }
+        });
 
         DOM.input.value = testHtml;
         DOM.convertBtn.click();
@@ -188,11 +202,11 @@ interface DOM {
     function parseHTML(markup: string): DocumentFragment {
         let beginsWith = markup.substring(0, 6).toLowerCase().trim();
 
-        if (beginsWith === "<!doct" || beginsWith === "<html>" ||beginsWith === "<head>" || beginsWith === "<body>") {
-			let doc = document.implementation.createHTMLDocument("");
-			doc.documentElement.innerHTML = markup;
-			return doc;
-		} else if ('content' in document.createElement('template')) {
+        if (beginsWith === "<!doct" || beginsWith === "<html>" || beginsWith === "<head>" || beginsWith === "<body>") {
+            let doc = document.implementation.createHTMLDocument("");
+            doc.documentElement.innerHTML = markup;
+            return doc;
+        } else if ('content' in document.createElement('template')) {
             // Template tag exists!
             let el = document.createElement('template');
             el.innerHTML = markup;
