@@ -1,7 +1,7 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const VARNAME = 0;
+const CHILDNAME = 0;
 const INSERTABLE = 1;
 const TREE = 2;
 class HTML2JS {
@@ -83,21 +83,19 @@ class HTML2JS {
                     this.createTree(child, !this.functional, childName, !this.functional ? 0 : (blockLevel ? blockLevel + 1 : 0))
                 ];
             })
-                .filter((child) => {
-                return child[TREE].length;
-            })
-                .map((child) => {
-                if (child[INSERTABLE]) {
+                .filter((object) => object[TREE].length)
+                .map((object) => {
+                if (object[INSERTABLE]) {
                     if (this.functional)
-                        return [this.getPadding(blockLevel) + varName + ".appendChild(" + child[TREE] + ");"];
+                        return [this.getPadding(blockLevel) + varName + ".appendChild(" + object[TREE] + ");"];
                     else
-                        return [child[TREE], varName + ".appendChild(" + child[VARNAME] + ");"];
+                        return [object[TREE], varName + ".appendChild(" + object[CHILDNAME] + ");"];
                 }
                 else {
                     if (this.functional)
-                        return [this.getPadding(blockLevel) + child[TREE] + ";"];
+                        return [this.getPadding(blockLevel) + object[TREE] + ";"];
                     else
-                        return [child[TREE]];
+                        return [object[TREE]];
                 }
             });
             if (children.length)
@@ -113,7 +111,11 @@ class HTML2JS {
         }
         else if (el.nodeType === Node.TEXT_NODE) {
             let text;
-            if (!this.removeEmpty || (this.removeEmpty && (text = el.data.trim()) && text.length))
+            if (this.removeEmpty)
+                text = el.data.trim();
+            else
+                text = el.data;
+            if (text.length)
                 out.push((!this.functional ? this.varString + " " + varName + " = " : "")
                     + "document.createTextNode("
                     + this.encapsulate(text)
@@ -348,7 +350,7 @@ const htmlconverter_1 = require("./htmlconverter");
         }
     });
     function parseHTML(markup) {
-        let beginsWith = markup.substring(0, 6).toLowerCase().trim();
+        let beginsWith = getFront(markup);
         if (beginsWith === "<!doct" || beginsWith === "<html>" || beginsWith === "<head>" || beginsWith === "<body>") {
             let doc = document.implementation.createHTMLDocument("");
             doc.documentElement.innerHTML = markup;
@@ -365,11 +367,48 @@ const htmlconverter_1 = require("./htmlconverter");
             let docfrag = document.createDocumentFragment();
             let el = document.createElement('body');
             el.innerHTML = markup;
-            for (let i = 0; 0 < el.childNodes.length;) {
+            for (let i = 0; 0 < el.childNodes.length; i++) {
                 docfrag.appendChild(el.childNodes[i]);
             }
             return docfrag;
         }
+    }
+    function getFront(markup) {
+        // gets first 6 non-whitespace, non-comment characters
+        let commentMode = 0;
+        let nwspace = false;
+        let out = 0;
+        for (let i = 0; i < markup.length; i++) {
+            let char = markup.charAt(i);
+            if (nwspace || (char !== " " && char !== "\n" && char !== "\r" && char !== "\t" && char !== "\v" && char !== "\f")) {
+                if (!nwspace) {
+                    nwspace = true;
+                    out = i;
+                }
+                if (commentMode === 0 && char === "<") {
+                    commentMode = 1; // potential comment
+                }
+                else if (commentMode === 1) {
+                    if (char === "!")
+                        commentMode = 2; // almost assuredly a comment
+                    else
+                        commentMode = 0;
+                }
+                else if (commentMode === 2) {
+                    if (char === "-")
+                        commentMode = 3; //definitely a comment, we will ignore everything from here on
+                    else
+                        commentMode = 0;
+                }
+                else if (commentMode === 3 && char === ">") {
+                    commentMode = 0; // comment ended, resume reading
+                    nwspace = false;
+                }
+                if (commentMode !== 3 && i - out === 6)
+                    return markup.substring(out, i).toLowerCase();
+            }
+        }
+        return markup.substring(0, 6).toLowerCase();
     }
 })(window, document);
 
