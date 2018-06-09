@@ -200,7 +200,7 @@ interface DOM {
     })
 
     function parseHTML(markup: string): DocumentFragment {
-        let beginsWith = markup.substring(0, 6).toLowerCase().trim();
+        let beginsWith = getFront(markup);
 
         if (beginsWith === "<!doct" || beginsWith === "<html>" || beginsWith === "<head>" || beginsWith === "<body>") {
             let doc = document.implementation.createHTMLDocument("");
@@ -217,10 +217,48 @@ interface DOM {
             let el = document.createElement('body');
             el.innerHTML = markup;
 
-            for (let i = 0; 0 < el.childNodes.length;) {
+            for (let i = 0; 0 < el.childNodes.length; i++) {
                 docfrag.appendChild(el.childNodes[i]);
             }
             return docfrag;
         }
+    }
+    function getFront(markup: string): string{
+        // gets first 6 non-whitespace, non-comment characters
+        let commentMode = 0;
+        let nwspace = false;
+        let out = 0;
+
+        for(let i = 0; i < markup.length; i++){
+            let char = markup.charAt(i);
+
+            if(nwspace || (char !== " " && char !== "\n" && char !== "\r" && char !== "\t" && char !== "\v" && char !== "\f")){
+                if(!nwspace){
+                    nwspace = true;
+                    out = i;
+                }
+
+                if(commentMode === 0 && char === "<"){
+                    commentMode = 1; // potential comment
+                }else if(commentMode === 1){
+                    if(char === "!")
+                        commentMode = 2; // almost assuredly a comment
+                    else 
+                        commentMode = 0;
+                }else if(commentMode === 2){
+                    if(char === "-")
+                        commentMode = 3; //definitely a comment, we will ignore everything from here on
+                    else
+                        commentMode = 0;
+                }else if(commentMode === 3 && char === ">"){
+                    commentMode = 0; // comment ended, resume reading
+                    nwspace = false;
+                }
+
+                if(commentMode !== 3 && i - out === 6)
+                    return markup.substring(out, i).toLowerCase();
+            }
+        }
+        return markup.substring(0, 6).toLowerCase();
     }
 })(window, document)

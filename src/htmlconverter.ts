@@ -10,7 +10,7 @@ interface ParserOptions {
     parentName?: string,
 }
 
-const VARNAME = 0;
+const CHILDNAME = 0;
 const INSERTABLE = 1;
 const TREE = 2;
 
@@ -109,20 +109,18 @@ export class HTML2JS {
                         this.createTree(child, !this.functional, childName, !this.functional ? 0 : (blockLevel ? blockLevel + 1 : 0))
                     ];
                 })
-                .filter((child: any) => {
-                    return child[TREE].length;
-                })
-                .map((child) => {
-                    if(child[INSERTABLE]){
+                .filter((object: any) => object[TREE].length)
+                .map((object) => {
+                    if(object[INSERTABLE]){
                         if (this.functional)
-                            return [this.getPadding(blockLevel) + varName + ".appendChild(" + child[TREE] + ");"];
+                            return [this.getPadding(blockLevel) + varName + ".appendChild(" + object[TREE] + ");"];
                         else
-                            return [child[TREE], varName + ".appendChild(" + child[VARNAME] + ");"];
+                            return [object[TREE], varName + ".appendChild(" + object[CHILDNAME] + ");"];
                     }else{
                         if (this.functional)
-                            return [this.getPadding(blockLevel) +  child[TREE] + ";"];
+                            return [this.getPadding(blockLevel) +  object[TREE] + ";"];
                         else
-                            return [child[TREE]];
+                            return [object[TREE]];
                     }
                 });
 
@@ -134,13 +132,18 @@ export class HTML2JS {
                 return "";
 
             if (this.functional) {
-                out.push(this.getPadding(blockLevel) + "return " + varName + ";");
+                out.push(this.getPadding(blockLevel)     + "return " + varName + ";");
                 out.push(this.getPadding(blockLevel - 1) + "})()" + (parent ? ";" : ""));
             }
         } else if (el.nodeType === Node.TEXT_NODE) {
             let text:string;
 
-            if (!this.removeEmpty || (this.removeEmpty && (text = el.data.trim()) && text.length)) 
+            if(this.removeEmpty)
+                text = el.data.trim();
+            else
+                text = el.data;
+
+            if (text.length) 
                 out.push(
                     (!this.functional ? this.varString + " " + varName + " = " : "")
                     + "document.createTextNode("
@@ -151,12 +154,14 @@ export class HTML2JS {
 
         return out.join(blockLevel || !this.functional ? "\n" : "");
     }
+
     private static canBeInserted(el: HTMLElement): boolean{
         if(el.tagName === "HTML" || el.tagName === "HEAD" || el.tagName === "BODY")
             return false;
         else
             return true;
     }
+
     private static getAccessString(el: HTMLElement): string{
         if(el.tagName === "HTML")
             return "document.documentElement"
@@ -167,6 +172,7 @@ export class HTML2JS {
         else 
             return 'document.createElement("' + el.tagName.toLowerCase() + '")';
     }
+    
     private static encapsulate(string: string): string {
         if (this.templateLiterals)
             return "`" + string.replace(/\`/g, "\\\`") + "`";
