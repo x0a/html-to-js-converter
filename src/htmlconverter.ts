@@ -111,39 +111,39 @@ export class HTML2JS {
                 })
                 .filter((object: any) => object[TREE].length)
                 .map((object) => {
-                    if(object[INSERTABLE]){
+                    if (object[INSERTABLE]) {
                         if (this.functional)
                             return [this.getPadding(blockLevel) + varName + ".appendChild(" + object[TREE] + ");"];
                         else
                             return [object[TREE], varName + ".appendChild(" + object[CHILDNAME] + ");"];
-                    }else{
+                    } else {
                         if (this.functional)
-                            return [this.getPadding(blockLevel) +  object[TREE] + ";"];
+                            return [this.getPadding(blockLevel) + object[TREE] + ";"];
                         else
                             return [object[TREE]];
                     }
                 });
 
-            if(children.length) children
+            if (children.length) children
                 .reduce((lines, line) => lines.concat(line))
                 .forEach((line: any) => out.push(line));
 
-            if(out.length === startedWith && !this.canBeInserted(el))
+            if (out.length === startedWith && !this.canBeInserted(el))
                 return "";
 
             if (this.functional) {
-                out.push(this.getPadding(blockLevel)     + "return " + varName + ";");
+                out.push(this.getPadding(blockLevel) + "return " + varName + ";");
                 out.push(this.getPadding(blockLevel - 1) + "})()" + (parent ? ";" : ""));
             }
         } else if (el.nodeType === Node.TEXT_NODE) {
-            let text:string;
+            let text: string;
 
-            if(this.removeEmpty)
+            if (this.removeEmpty)
                 text = el.data.trim();
             else
                 text = el.data;
 
-            if (text.length) 
+            if (text.length)
                 out.push(
                     (!this.functional ? this.varString + " " + varName + " = " : "")
                     + "document.createTextNode("
@@ -155,24 +155,24 @@ export class HTML2JS {
         return out.join(blockLevel || !this.functional ? "\n" : "");
     }
 
-    private static canBeInserted(el: HTMLElement): boolean{
-        if(el.tagName === "HTML" || el.tagName === "HEAD" || el.tagName === "BODY")
+    private static canBeInserted(el: HTMLElement): boolean {
+        if (el.tagName === "HTML" || el.tagName === "HEAD" || el.tagName === "BODY")
             return false;
         else
             return true;
     }
 
-    private static getAccessString(el: HTMLElement): string{
-        if(el.tagName === "HTML")
+    private static getAccessString(el: HTMLElement): string {
+        if (el.tagName === "HTML")
             return "document.documentElement"
-        else if(el.tagName === "HEAD")
+        else if (el.tagName === "HEAD")
             return "document.head";
-        else if(el.tagName === "BODY")
+        else if (el.tagName === "BODY")
             return "document.body";
-        else 
+        else
             return 'document.createElement("' + el.tagName.toLowerCase() + '")';
     }
-    
+
     private static encapsulate(string: string): string {
         if (this.templateLiterals)
             return "`" + string.replace(/\`/g, "\\\`") + "`";

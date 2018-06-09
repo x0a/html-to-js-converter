@@ -169,7 +169,7 @@ interface DOM {
                 DOM.parentName.classList.remove("is-invalid");
             }
         });
-        
+
         DOM.childName.addEventListener("keyup", () => {
             if (!DOM.childName.value.length) {
                 if (!DOM.childName.classList.contains("is-invalid"))
@@ -223,39 +223,40 @@ interface DOM {
             return docfrag;
         }
     }
-    function getFront(markup: string): string{
+
+    function getFront(markup: string): string {
         // gets first 6 non-whitespace, non-comment characters
         let commentMode = 0;
         let nwspace = false;
         let out = 0;
 
-        for(let i = 0; i < markup.length; i++){
+        for (let i = 0; i < markup.length; i++) {
             let char = markup.charAt(i);
 
-            if(nwspace || (char !== " " && char !== "\n" && char !== "\r" && char !== "\t" && char !== "\v" && char !== "\f")){
-                if(!nwspace){
+            if (nwspace || (char !== " " && char !== "\n" && char !== "\r" && char !== "\t" && char !== "\v" && char !== "\f")) {
+                if (!nwspace) {
                     nwspace = true;
                     out = i;
                 }
 
-                if(commentMode === 0 && char === "<"){
+                if (commentMode === 0 && char === "<") {
                     commentMode = 1; // potential comment
-                }else if(commentMode === 1){
-                    if(char === "!")
+                } else if (commentMode === 1) {
+                    if (char === "!")
                         commentMode = 2; // almost assuredly a comment
-                    else 
+                    else
                         commentMode = 0;
-                }else if(commentMode === 2){
-                    if(char === "-")
+                } else if (commentMode === 2) {
+                    if (char === "-")
                         commentMode = 3; //definitely a comment, we will ignore everything from here on
                     else
                         commentMode = 0;
-                }else if(commentMode === 3 && char === ">"){
+                } else if (commentMode === 3 && char === ">") {
                     commentMode = 0; // comment ended, resume reading
                     nwspace = false;
                 }
 
-                if(commentMode !== 3 && i - out === 6)
+                if (commentMode !== 3 && i - out === 6)
                     return markup.substring(out, i).toLowerCase();
             }
         }
