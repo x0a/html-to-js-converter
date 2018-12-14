@@ -24,6 +24,7 @@ export class HTML2JS {
     private static parentName = "el";
     private static childName = "Ch";
     private static removeEmpty = true;
+    private static defaultNamespace = document.createElement("div").namespaceURI;
 
     static create(element: HTMLElement, options: ParserOptions): string {
         //disabling ES6 should also disable template literals
@@ -66,7 +67,6 @@ export class HTML2JS {
         this.parentName = options.parentName;
         this.childName = options.childName;
         this.removeEmpty = options.removeEmpty;
-
         return this.createTree(element, options.isParent, this.parentName, options.tabLevel);
     }
 
@@ -91,6 +91,8 @@ export class HTML2JS {
                 for (let i = 0; i < el.attributes.length; i++) {
                     let attrib = el.attributes[i];
 
+                    if(attrib.name === "xmlns") continue;
+                    
                     out.push(
                         this.getPadding(this.functional && blockLevel)
                         + varName + '.setAttribute("'
@@ -169,8 +171,14 @@ export class HTML2JS {
             return "document.head";
         else if (el.tagName === "BODY")
             return "document.body";
-        else
-            return 'document.createElement("' + el.tagName.toLowerCase() + '")';
+        else {
+            const namespace = el.lookupNamespaceURI("");
+            if (namespace !== this.defaultNamespace) {
+                return 'document.createElementNS("' + namespace + '", "' + el.tagName.toLowerCase() + '")';
+            } else {
+                return 'document.createElement("' + el.tagName.toLowerCase() + '")';
+            }
+        }
     }
 
     private static encapsulate(string: string): string {

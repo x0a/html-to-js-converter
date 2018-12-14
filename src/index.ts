@@ -202,7 +202,7 @@ interface DOM {
     function parseHTML(markup: string): DocumentFragment {
         let beginsWith = getFront(markup);
 
-        if (beginsWith === "<!doct" || beginsWith === "<html>" || beginsWith === "<head>" || beginsWith === "<body>") {
+        if (beginsWith === "<!doc" || beginsWith === "<html" || beginsWith === "<head" || beginsWith === "<body") {
             let doc = document.implementation.createHTMLDocument("");
             doc.documentElement.innerHTML = markup;
             return doc;
@@ -256,10 +256,10 @@ interface DOM {
                     nwspace = false;
                 }
 
-                if (commentMode !== 3 && i - out === 6)
+                if (commentMode !== 3 && i - out === 5)
                     return markup.substring(out, i).toLowerCase();
             }
         }
-        return markup.substring(0, 6).toLowerCase();
+        return markup.substring(0, 5).toLowerCase();
     }
 })(window, document)
