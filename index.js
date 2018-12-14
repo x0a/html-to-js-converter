@@ -68,6 +68,8 @@ class HTML2JS {
             if (el.hasAttributes && el.hasAttributes())
                 for (let i = 0; i < el.attributes.length; i++) {
                     let attrib = el.attributes[i];
+                    if (attrib.name === "xmlns")
+                        continue;
                     out.push(this.getPadding(this.functional && blockLevel)
                         + varName + '.setAttribute("'
                         + attrib.name + '", '
@@ -136,8 +138,15 @@ class HTML2JS {
             return "document.head";
         else if (el.tagName === "BODY")
             return "document.body";
-        else
-            return 'document.createElement("' + el.tagName.toLowerCase() + '")';
+        else {
+            const namespace = el.lookupNamespaceURI("");
+            if (namespace !== this.defaultNamespace) {
+                return 'document.createElementNS("' + namespace + '", "' + el.tagName.toLowerCase() + '")';
+            }
+            else {
+                return 'document.createElement("' + el.tagName.toLowerCase() + '")';
+            }
+        }
     }
     static encapsulate(string) {
         if (this.templateLiterals)
@@ -179,6 +188,7 @@ HTML2JS.beautify = true;
 HTML2JS.parentName = "el";
 HTML2JS.childName = "Ch";
 HTML2JS.removeEmpty = true;
+HTML2JS.defaultNamespace = document.createElement("div").namespaceURI;
 exports.HTML2JS = HTML2JS;
 
 },{}],2:[function(require,module,exports){
@@ -351,7 +361,7 @@ const htmlconverter_1 = require("./htmlconverter");
     });
     function parseHTML(markup) {
         let beginsWith = getFront(markup);
-        if (beginsWith === "<!doct" || beginsWith === "<html>" || beginsWith === "<head>" || beginsWith === "<body>") {
+        if (beginsWith === "<!doc" || beginsWith === "<html" || beginsWith === "<head" || beginsWith === "<body") {
             let doc = document.implementation.createHTMLDocument("");
             doc.documentElement.innerHTML = markup;
             return doc;
@@ -404,11 +414,11 @@ const htmlconverter_1 = require("./htmlconverter");
                     commentMode = 0; // comment ended, resume reading
                     nwspace = false;
                 }
-                if (commentMode !== 3 && i - out === 6)
+                if (commentMode !== 3 && i - out === 5)
                     return markup.substring(out, i).toLowerCase();
             }
         }
-        return markup.substring(0, 6).toLowerCase();
+        return markup.substring(0, 5).toLowerCase();
     }
 })(window, document);
 
